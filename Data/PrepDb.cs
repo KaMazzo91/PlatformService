@@ -1,34 +1,52 @@
+using Microsoft.EntityFrameworkCore;
 using PlatformService.Models;
 
 namespace PlatformService.Data
 {
     public static class PrepDb
     {
-        public static void PrepPopulation(IApplicationBuilder app)
+        public static void PrepPopulation(IApplicationBuilder app, bool IsProduction)
         {
             using(var serviceScope = app.ApplicationServices.CreateScope())
             {
-                SeedData(serviceScope.ServiceProvider.GetService<AppDbContext>());
+                SeedData(serviceScope.ServiceProvider.GetService<AppDbContext>(), IsProduction);
             }
         }
 
-        private static void SeedData(AppDbContext context)
+        private static void SeedData(AppDbContext context, bool IsProduction)
         {
-            if(!context.PLatforms.Any())
+            if(IsProduction)
             {
-                Console.WriteLine("--> Seeding Data...");
+                Console.WriteLine("--> Attempting to apply migrations...");
 
-                context.PLatforms.AddRange(
-                    new Platform() {Name="Dot Net", Publisher="Microsoft", Cost="Free"},
-                    new Platform() {Name="SQL", Publisher="Microsoft", Cost="Free"},
-                    new Platform() {Name="Kubernetes", Publisher="Cloud Native", Cost="Free"}
-                );
-
-                context.SaveChanges();
+                try
+                {
+                    context.Database.Migrate();
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"--> Could not run migration: {ex.Message}");
+                }
+                
             }
             else
             {
-                Console.WriteLine("--> we alredy have data");
+                if(!context.PLatforms.Any())
+                {
+                    Console.WriteLine("--> Seeding Data...");
+
+                    context.PLatforms.AddRange(
+                        new Platform() {Name="Dot Net", Publisher="Microsoft", Cost="Free"},
+                        new Platform() {Name="SQL", Publisher="Microsoft", Cost="Free"},
+                        new Platform() {Name="Kubernetes", Publisher="Cloud Native", Cost="Free"}
+                    );
+
+                    context.SaveChanges();
+                }
+                else
+                {
+                    Console.WriteLine("--> we alredy have data");
+                }
             }
         }
     }

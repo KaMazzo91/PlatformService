@@ -10,13 +10,30 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseInMemoryDatabase("InMem"));
+
+string connString = builder.Configuration.GetConnectionString("PlatformsConn");
+
+string section = builder.Configuration.GetValue<string>("CommandService");
+
+if(builder.Environment.IsProduction())
+{
+    Console.WriteLine($"--> Using SqlServer Db");
+    builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlServer(connString));
+}
+else
+{
+    Console.WriteLine($"--> Using InMen Db");
+    builder.Services.AddDbContext<AppDbContext>(opt => opt.UseInMemoryDatabase("InMem"));
+}
+
+Console.WriteLine($"--> CommandService EndPoint {section}");
+
 builder.Services.AddScoped<IPlatformRepo, PlatformRepo>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddHttpClient<ICommandDataClient, HttpCommandDataClient>();
 
 var app = builder.Build();
-PrepDb.PrepPopulation(app);
+PrepDb.PrepPopulation(app, app.Environment.IsProduction());
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
